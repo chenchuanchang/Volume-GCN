@@ -19,9 +19,8 @@ def main():
     time_start = time.time()
     hp = parse_args()
     print("开始读取数据")
-    G = Graphs(hp)
+    G, labeled_nodes = Graphs(hp)
     node_num = len(G.nodes())
-    labeled_nodes = [0 for i in range(100)]
     hp.node_num = node_num
     hp.labeled_node = len(labeled_nodes)
     # print(node_num)
