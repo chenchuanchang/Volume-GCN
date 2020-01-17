@@ -7,7 +7,7 @@ from model import Volume_GCN
 from tqdm import tqdm
 from module import Graphs
 from load_data import train_data
-
+from sklearn import metrics
 from args import parse_args
 import math
 import time
@@ -35,8 +35,8 @@ def main():
     xu = tf.placeholder(dtype=tf.int32, shape=(node_num-hp.labeled_node), name='xu')
 
     loss, train_op, global_step = m.train(A, xs, ys)
-    predict_label = m.eval(A, xu)
-    dA, dxs, dys, dxu = train_data(hp, node_num, G, labeled_nodes)
+    predict_label = m.predict(A, xu)
+    dA, dxs, dys, dxu, dyu = train_data(hp, node_num, G, labeled_nodes)
 
     print("开始训练")
     with tf.Session() as sess:
@@ -46,7 +46,7 @@ def main():
             _loss, _, _gs = sess.run([loss, train_op, global_step], feed_dict={A:dA, xs:dxs, ys:dys})
             print("   Epoch : %02d   loss : %.2f" % (i+1, _loss))
         _pre = sess.run([predict_label], feed_dict={A:dA, xu:dxu})
-        print(_pre)
+        print("Fin AUC is : %.2lf"%(metrics.auc(dyu, _pre)))
     time_end = time.time()
     all_time = int(time_end - time_start)
     hours = int(all_time / 3600)

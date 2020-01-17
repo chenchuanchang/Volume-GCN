@@ -3,6 +3,8 @@ import numpy as np
 def train_data(hp, node_num, G, labeled_nodes):
     D = np.zeros((node_num, ))
     A = np.eye(node_num)
+    N = len(labeled_nodes)
+    train_nodes = labeled_nodes[:int(N)*hp.ratio]
     xs = np.array(labeled_nodes)
     ys = np.ones((hp.labeled_node,))
     unlabeled_nodes = set(G.nodes())-set(labeled_nodes)

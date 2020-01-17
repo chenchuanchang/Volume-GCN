@@ -55,7 +55,7 @@ class Volume_GCN:
 
         return loss, train_op, global_step
 
-    def eval(self, A, xu):
+    def predict(self, A, xu):
         h_1 = tf.nn.relu(tf.matmul(tf.matmul(A, self.h), self.w))
         h_2 = tf.matmul(A, h_1)
 
