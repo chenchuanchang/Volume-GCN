@@ -9,9 +9,7 @@ from module import Graphs
 from load_data import train_data
 from sklearn import metrics
 from args import parse_args
-import math
 import time
-import os
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = ""
 
