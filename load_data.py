@@ -8,7 +8,8 @@ def train_data(hp, node_num, G, labeled_nodes):
     test_nodes = labeled_nodes[int(N*hp.ratio):]
     xs = np.array(train_nodes)
     ys = np.ones((int(N*hp.ratio),))
-    unlabeled_nodes = set(G.nodes())-set(labeled_nodes)
+    unlabeled_nodes = list(set(G.nodes())-set(labeled_nodes))
+
     xu = np.concatenate((np.array(unlabeled_nodes), np.array(test_nodes)))
     yu = np.concatenate((np.zeros(node_num-N,), np.ones(N-int(N*hp.ratio),)))
 
