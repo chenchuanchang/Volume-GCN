@@ -48,8 +48,9 @@ def main():
     f = open('node_embedding.emb', 'wb')
     pickle.dump(emb, f)
 
-    f = open('node_embedding.emb', 'rb')
-    emb = pickle.load(f)
+    # f = open('node_embedding.emb', 'rb')
+    # emb = pickle.load(f)
+    # print(emb)
 
 if __name__ == '__main__':
     main()
