@@ -1,78 +1,75 @@
-import tensorflow as tf
-import numpy as np
-import os
+# -*- coding: utf-8 -*-
+# /usr/bin/python3
 import sys
+
+sys.path.append("/")
+import tensorflow as tf
+from model import Volume_GCN
+from tqdm import tqdm
+from module import Graphs
+from load_data import train_data
+from sklearn import metrics
 from args import parse_args
-arg = parse_args()
-from module import get_initialization, noam_scheme, predict_label
+import math
+import time
+import random
 
-def save_emb(y, alpha):
-    file_path = '../Embeddings/Volume-GCN/' + arg.dataset + '/'
-    if not os.path.exists(file_path):
-        os.makedirs(file_path)
-    for t in range(arg.T):
-        file_nam = file_path+str(t).zfill(4) + '.emb'
-        file = open(file_nam, 'w')
-        for v in range(arg.node_num):
-            file.write(str(v))
-            for it in y[t][v]:
-                file.write(' ' + str(it))
-            file.write('\n')
-        file.close()
-    file_nam = file_path+'alpha.con'
-    file = open(file_nam, 'w')
-    file.write(str(arg.node_num)+' '+str(arg.dim)+'\n')
-    for v in range(arg.node_num):
-        file.write(str(v))
-        for it in alpha[v]:
-            file.write(' ' + str(it))
-        file.write('\n')
-    file.close()
-    return 1
 
-class Volume_GCN:
-    def __init__(self, args, G):
-        self.hp = args['hp']
-        self.G = G
-        self.f, self.w1, self.w2, self.W = get_initialization(self.hp, self.G)
+# os.environ['CUDA_VISIBLE_DEVICES'] = ""
 
-    def train(self, A, xs, ys):
-        # 先映射
-        self.h = tf.layers.dense(self.f, self.hp.dim, activation=None)
+def main():
+    time_start = time.time()
+    hp = parse_args()
+    # print("开始读取数据")
 
-        # 两层卷积
-        h_1 = tf.nn.relu(tf.matmul(tf.matmul(A, self.h), self.w1))
-        h_2 = tf.matmul(A, h_1)
-        # h_2 = tf.nn.relu(tf.matmul(tf.matmul(A, h_1), self.w2))
+    G = Graphs(hp)
+    # random label
+    print("The gexf graph data has been loaded.")
 
-        #半监督部分
-        xs_emb = tf.squeeze(tf.nn.embedding_lookup(h_2, xs))
-        logits = tf.matmul(xs_emb, self.W)
-        labels = tf.one_hot(ys, self.hp.label, axis=1)
-        loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels)
-        loss = tf.reduce_mean(loss)
+    node_num = len(G.nodes())
+    hp.node_num = node_num
+    labeled_nodes = [[i, i%3] for i in range(300)]
+    # for n in range(node_num):
+    #     if G.node[str(n)]['cls'] != -1:
+    #         labeled_nodes.append([n, G.node[str(n)]['cls']])
+    random.shuffle(labeled_nodes) # 标签打散
+    hp.labeled_node = len(labeled_nodes)
+    # print(node_num)
+    # print("读取数据完成，填入模型参数")
 
-        global_step = tf.train.get_or_create_global_step()
+    arg = {}
+    arg['hp'] = hp
+    print("The model parameters have been set.")
+    # print("构建模型")
+    m = Volume_GCN(arg, G)
+    A = tf.placeholder(dtype=tf.float32, shape=(node_num, node_num), name='A')
+    xs = tf.placeholder(dtype=tf.int32, shape=(int(hp.labeled_node * hp.ratio)), name='xs')
+    ys = tf.placeholder(dtype=tf.int32, shape=(int(hp.labeled_node * hp.ratio)), name='ys')
+    xu = tf.placeholder(dtype=tf.int32, shape=(hp.labeled_node - int(hp.labeled_node * hp.ratio)), name='xu')
 
-        #动态学习速率
-        lr = noam_scheme(self.hp.lr, global_step, self.hp.warmup_steps)
-        # lr = self.hp.lr
-        optimizer = tf.train.AdamOptimizer(lr)
-        train_op = optimizer.minimize(loss, global_step=global_step)
+    loss, train_op, global_step = m.train(A, xs, ys)
+    predict_label = m.predict(A, xu)
+    dA, dxs, dys, dxu, dyu = train_data(hp, node_num, G, labeled_nodes)
 
-        return loss, train_op, global_step
+    # print(dA)
+    print("The model has been constructed. Starting to train...")
+    # print("开始训练")
+    with tf.Session() as sess:
+        sess.run(tf.global_variables_initializer())
+        _gs = sess.run(global_step)
+        for i in tqdm(range(hp.epochs)):
+            _loss, _, _gs = sess.run([loss, train_op, global_step], feed_dict={A:dA, xs:dxs, ys:dys})
+            print("   Epoch : %02d   loss : %.2f" % (i+1, _loss))
+        _pre = sess.run([predict_label], feed_dict={A:dA, xu:dxu})
+        print("Fin accuracy is : ", metrics.accuracy_score(dyu, _pre[0]))
+        # print("Fin AUC score is : ", metrics.auc(dyu, _pre[0])) # tf不支持多分类，得另外写
+    time_end = time.time()
+    all_time = int(time_end - time_start)
 
-    def predict(self, A, xu):
-        h_1 = tf.nn.relu(tf.matmul(tf.matmul(A, self.h), self.w1))
-        h_2 = tf.matmul(A, h_1)
-        # h_2 = tf.nn.relu(tf.matmul(tf.matmul(A, h_1), self.w2))
+    hours = int(all_time / 3600)
+    minute = int((all_time - 3600 * hours) / 60)
+    print('totally cost  :  ', hours, 'h', minute, 'm', all_time - hours * 3600 - 60 * minute, 's')
 
-        xs_emb = tf.squeeze(tf.nn.embedding_lookup(h_2, xu))
-        logits = tf.nn.softmax(tf.matmul(xs_emb, self.W))
 
-        pre = tf.argmax(logits, 1)
-        return pre
-
-    def save_embeddings(self):
-        flg = tf.py_func(save_emb, [self.h], tf.int32)
-        return flg
+if __name__ == '__main__':
+    main()
