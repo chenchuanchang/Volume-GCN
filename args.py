@@ -10,7 +10,7 @@ def parse_args():
                         help='configure json file')
 
     # training scheme
-    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--epochs', default=10, type=int)
     # parser.add_argument('--batch_size_con', default=10000, type=int)
     # parser.add_argument('--batch_size', default=5000, type=int)
     # parser.add_argument('--eval_size', default=3000, type=int)
@@ -46,6 +46,7 @@ def parse_args():
     gexf_file = json_content["file_name"]["labeled_graph_file"]
 
     args.dataset = file_prefix + gexf_file
+    args.epochs = json_content['gcn']['epochs']
     args.dim = json_content['gcn']['dimension']
     args.vec_dim = json_content['gcn']['vector_dimension']
     args.node_embedding = file_prefix + json_content['file_name']['node_embedding_file']
