@@ -15,7 +15,7 @@ def train_data(hp, node_num, G, labeled_nodes):
     unlabeled_nodes = list(set(G.nodes())-set(node_id))
     xu = np.array(test_nodes)
     yu_ = []
-    for i in range(N-int(N*hp.ratio), N):
+    for i in range(int(N*hp.ratio), N):
         yu_.append(labeled_nodes[i][1])
     yu = np.array(yu_)
 
