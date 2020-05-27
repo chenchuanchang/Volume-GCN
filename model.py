@@ -31,19 +31,26 @@ def save_emb(y, alpha):
     return 1
 
 class Volume_GCN:
-    def __init__(self, args):
+    def __init__(self, args, G):
         self.hp = args['hp']
-        self.h, self.w, self.W = get_initialization(self.hp)
+        self.G = G
+        self.f, self.w1, self.w2, self.W = get_initialization(self.hp, self.G)
 
     def train(self, A, xs, ys):
+        # 先映射
+        self.h = tf.layers.dense(self.f, self.hp.dim, activation=None)
+
         # 两层卷积
-        h_1 = tf.nn.relu(tf.matmul(tf.matmul(A, self.h), self.w))
+        h_1 = tf.nn.relu(tf.matmul(tf.matmul(A, self.h), self.w1))
         h_2 = tf.matmul(A, h_1)
+        # h_2 = tf.nn.relu(tf.matmul(tf.matmul(A, h_1), self.w2))
 
         #半监督部分
         xs_emb = tf.squeeze(tf.nn.embedding_lookup(h_2, xs))
-        logits = tf.nn.sigmoid(tf.matmul(xs_emb, self.W))
-        loss = -tf.reduce_sum(ys*tf.log(logits+ 1e-15))
+        logits = tf.matmul(xs_emb, self.W)
+        labels = tf.one_hot(ys, self.hp.label, axis=1)
+        loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels)
+        loss = tf.reduce_mean(loss)
 
         global_step = tf.train.get_or_create_global_step()
 
@@ -56,16 +63,16 @@ class Volume_GCN:
         return loss, train_op, global_step
 
     def predict(self, A, xu):
-        h_1 = tf.nn.relu(tf.matmul(tf.matmul(A, self.h), self.w))
+        h_1 = tf.nn.relu(tf.matmul(tf.matmul(A, self.h), self.w1))
         h_2 = tf.matmul(A, h_1)
+        # h_2 = tf.nn.relu(tf.matmul(tf.matmul(A, h_1), self.w2))
 
         xs_emb = tf.squeeze(tf.nn.embedding_lookup(h_2, xu))
-        logits = tf.nn.sigmoid(tf.matmul(xs_emb, self.W))
+        logits = tf.nn.softmax(tf.matmul(xs_emb, self.W))
 
-        pre = tf.py_func(predict_label, [logits], tf.float32)
+        pre = tf.argmax(logits, 1)
         return pre
 
     def save_embeddings(self):
         flg = tf.py_func(save_emb, [self.h], tf.int32)
         return flg
-
