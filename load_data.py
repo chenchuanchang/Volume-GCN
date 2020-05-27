@@ -4,14 +4,21 @@ def train_data(hp, node_num, G, labeled_nodes):
     D = np.zeros((node_num, ))
     A = np.eye(node_num)
     N = len(labeled_nodes)
-    train_nodes = labeled_nodes[:int(N*hp.ratio)]
-    test_nodes = labeled_nodes[int(N*hp.ratio):]
+    node_id = [node[0] for node in labeled_nodes]
+    train_nodes = node_id[:int(N*hp.ratio)]
+    test_nodes = node_id[int(N*hp.ratio):]
     xs = np.array(train_nodes)
-    ys = np.ones((int(N*hp.ratio),))
-    unlabeled_nodes = list(set(G.nodes())-set(labeled_nodes))
+    ys_ = []
+    for i in range(int(N*hp.ratio)):
+        ys_.append(labeled_nodes[i][1])
+    ys = np.array(ys_)
+    unlabeled_nodes = list(set(G.nodes())-set(node_id))
+    xu = np.array(test_nodes)
+    yu_ = []
+    for i in range(N-int(N*hp.ratio), N):
+        yu_.append(labeled_nodes[i][1])
+    yu = np.array(yu_)
 
-    xu = np.concatenate((np.array(unlabeled_nodes), np.array(test_nodes)))
-    yu = np.concatenate((np.zeros(node_num-N,), np.ones(N-int(N*hp.ratio),)))
 
     for edge in G.edges():
         A[int(edge[0])][int(edge[1])] += 1
