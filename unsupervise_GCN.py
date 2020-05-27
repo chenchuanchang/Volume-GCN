@@ -4,30 +4,24 @@ from module import Graphs
 import numpy as np
 import argparse
 import pickle
-
+from args import parse_args
 # os.environ['CUDA_VISIBLE_DEVICES'] = ""
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="GCN")
-    # model
-    parser.add_argument('--dim', type=int, default=256,
-                        help='Number of dimensions. Default is 256  (0-255).')
 
-    parser.add_argument('--dataset', default='datasets/jet_mixfrac_0051_supervoxels.gexf',
-                        help='Name of dataset')
-    parser.add_argument('--node_num', type=int, default=None,
-                        help='Number of nodes.')
-    args = parser.parse_args()
-    return args
+import json
+import time
 
 def main():
+    start = time.time()
     hp = parse_args()
     G = Graphs(hp)
+
     node_num = len(G.nodes())
     labeled_nodes = [0 for i in range(100)]
     hp.node_num = node_num
     hp.labeled_node = len(labeled_nodes)
 
+    # print(hp)
     D = np.zeros((node_num,))
     A = np.eye(node_num)
     for edge in G.edges():
@@ -45,12 +39,18 @@ def main():
             emb[i][j] = G.node[str(i)][str(j)]
     w = (np.random.randn(hp.dim, hp.dim) / np.sqrt(hp.dim/2)).astype('float32')
     emb = np.matmul(np.matmul(L, np.matmul(np.matmul(L, emb), w)), w)
-    f = open('node_embedding.emb', 'wb')
+    f = open(hp.node_embedding, 'wb')
     pickle.dump(emb, f)
 
-    # f = open('node_embedding.emb', 'rb')
+    print("Node embedding file has been saved. (Unsupervised)")
+    elapsed = (time.time() - start)
+    print("Time for unsupervised GCN : ", elapsed, "s.")
+
+
+    # f = open(hp.node_embedding, 'rb')
     # emb = pickle.load(f)
-    # print(emb)
+    #
+    # print(emb.shape)
 
 if __name__ == '__main__':
     main()
