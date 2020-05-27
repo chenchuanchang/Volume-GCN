@@ -45,7 +45,7 @@ def main():
     A = tf.placeholder(dtype=tf.float32, shape=(node_num, node_num), name='A')
     xs = tf.placeholder(dtype=tf.int32, shape=(int(hp.labeled_node * hp.ratio)), name='xs')
     ys = tf.placeholder(dtype=tf.int32, shape=(int(hp.labeled_node * hp.ratio)), name='ys')
-    xu = tf.placeholder(dtype=tf.int32, shape=(node_num - int(hp.labeled_node * hp.ratio)), name='xu')
+    xu = tf.placeholder(dtype=tf.int32, shape=(hp.labeled_node - int(hp.labeled_node * hp.ratio)), name='xu')
 
     loss, train_op, global_step = m.train(A, xs, ys)
     predict_label = m.predict(A, xu)
@@ -62,7 +62,7 @@ def main():
             print("   Epoch : %02d   loss : %.2f" % (i+1, _loss))
         _pre = sess.run([predict_label], feed_dict={A:dA, xu:dxu})
         print("Fin accuracy is : ", metrics.accuracy_score(dyu, _pre[0]))
-        print("Fin AUC score is : ", metrics.auc(dyu, _pre[0]))
+        # print("Fin AUC score is : ", metrics.auc(dyu, _pre[0])) # tf不支持多分类，得另外写
     time_end = time.time()
     all_time = int(time_end - time_start)
 
