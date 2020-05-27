@@ -34,20 +34,25 @@ class Volume_GCN:
     def __init__(self, args, G):
         self.hp = args['hp']
         self.G = G
-        self.f, self.w1, self.w2, self.W = get_initialization(self.hp, self.G)
+        # self.f, self.w1, self.w2, self.W = get_initialization(self.hp, self.G)
+        self.f = get_initialization(self.hp, self.G)
 
     def train(self, A, xs, ys):
-        # 先映射
-        self.h = tf.layers.dense(self.f, self.hp.dim, activation=None)
+        # # 先映射
+        # self.h = tf.layers.dense(self.f, self.hp.dim, activation=None)
 
         # 两层卷积
-        h_1 = tf.nn.relu(tf.matmul(tf.matmul(A, self.h), self.w1))
+        h_1 = tf.matmul(A, self.f)
+        h_1 = tf.layers.dense(h_1, self.hp.hidden1, activation=tf.nn.relu, name="hidden_layer_1", reuse=tf.AUTO_REUSE)
+        h_1 = tf.layers.dropout(h_1, self.hp.dropout, name="dropout_layer_1")
+
         h_2 = tf.matmul(A, h_1)
-        # h_2 = tf.nn.relu(tf.matmul(tf.matmul(A, h_1), self.w2))
+        h_2 = tf.layers.dense(h_2, self.hp.hidden2, activation=tf.nn.relu, name="hidden_layer_2", reuse=tf.AUTO_REUSE)
+        h_2 = tf.layers.dropout(h_2, self.hp.dropout, name="dropout_layer_2")
 
         #半监督部分
         xs_emb = tf.squeeze(tf.nn.embedding_lookup(h_2, xs))
-        logits = tf.matmul(xs_emb, self.W)
+        logits = tf.layers.dense(xs_emb, self.hp.label, activation=None, name="classifer", reuse=tf.AUTO_REUSE)
         labels = tf.one_hot(ys, self.hp.label, axis=1)
         loss = tf.nn.softmax_cross_entropy_with_logits_v2(logits=logits, labels=labels)
         loss = tf.reduce_mean(loss)
@@ -63,12 +68,14 @@ class Volume_GCN:
         return loss, train_op, global_step
 
     def predict(self, A, xu):
-        h_1 = tf.nn.relu(tf.matmul(tf.matmul(A, self.h), self.w1))
+        h_1 = tf.matmul(A, self.f)
+        h_1 = tf.layers.dense(h_1, self.hp.hidden1, activation=tf.nn.relu, name="hidden_layer_1", reuse=tf.AUTO_REUSE)
+
         h_2 = tf.matmul(A, h_1)
-        # h_2 = tf.nn.relu(tf.matmul(tf.matmul(A, h_1), self.w2))
+        h_2 = tf.layers.dense(h_2, self.hp.hidden2, activation=tf.nn.relu, name="hidden_layer_2", reuse=tf.AUTO_REUSE)
 
         xs_emb = tf.squeeze(tf.nn.embedding_lookup(h_2, xu))
-        logits = tf.nn.softmax(tf.matmul(xs_emb, self.W))
+        logits = tf.layers.dense(xs_emb, self.hp.label, activation=None, name="classifer", reuse=tf.AUTO_REUSE)
 
         pre = tf.argmax(logits, 1)
         return pre
