@@ -33,18 +33,19 @@ def get_initialization(hp, G):
             # print(n, i)
             f_init[n][i-1] = G.node[str(n)][str(i)]
 
-    w1_init = (np.random.randn(hp.dim, hp.dim) / np.sqrt(hp.dim/2)).astype('float32')
-    w2_init = (np.random.randn(hp.dim, hp.dim) / np.sqrt(hp.dim / 2)).astype('float32')
-    W_init = (np.random.randn(hp.dim, hp.label) / np.sqrt(hp.dim/2)).astype('float32')
+    # w1_init = (np.random.randn(hp.dim, hp.hidden1) / np.sqrt(hp.dim/2)).astype('float32')
+    # w2_init = (np.random.randn(hp.hidden1, hp.dim) / np.sqrt(hp.dim / 2)).astype('float32')
+    # W_init = (np.random.randn(hp.dim, hp.label) / np.sqrt(hp.dim/2)).astype('float32')
     # y = []
     # for t in range(hp.T):
     #     y.append(tf.Variable(h_init + 0.001 * tf.random_normal([hp.node_num, hp.dim]) / np.sqrt(hp.node_num/2),
     #                          name='emb_'+str(t), trainable=True))
     f = tf.Variable(f_init, name='emb', trainable=True)
-    w1 = tf.Variable(w1_init, name='w1', trainable=True)
-    w2 = tf.Variable(w2_init, name='w2', trainable=True)
-    W = tf.Variable(W_init, name='W', trainable=True)
-    return f, w1, w2, W
+    # w1 = tf.Variable(w1_init, name='w1', trainable=True)
+    # w2 = tf.Variable(w2_init, name='w2', trainable=True)
+    # W = tf.Variable(W_init, name='W', trainable=True)
+    return f
+    # return f, w1, w2, W
 
 def noam_scheme(init_lr, global_step, warmup_steps=4000.):
     step = tf.cast(global_step + 1, dtype=tf.float32)
